@@ -396,6 +396,10 @@ public abstract class EditingHostPage : SinglePhotoPage {
     private Gtk.ToggleToolButton redeye_button = null;
     private Gtk.ToggleToolButton adjust_button = null;
     private Gtk.ToggleToolButton straighten_button = null;
+
+    private Gtk.ToolItem comment_tool_item = null;
+    private Gtk.Entry comment_entry = null;
+    private Gtk.ToolButton comment_button = null;
 #if ENABLE_FACES
     private Gtk.ToggleToolButton faces_button = null;
 #endif
@@ -454,7 +458,7 @@ public abstract class EditingHostPage : SinglePhotoPage {
         crop_button.set_tooltip_text(Resources.CROP_TOOLTIP);
         crop_button.toggled.connect(on_crop_toggled);
         crop_button.is_important = true;
-        toolbar.insert(crop_button, -1);
+        // toolbar.insert(crop_button, -1);
 
         // straightening tool
         straighten_button = new Gtk.ToggleToolButton ();
@@ -463,7 +467,7 @@ public abstract class EditingHostPage : SinglePhotoPage {
         straighten_button.set_tooltip_text(Resources.STRAIGHTEN_TOOLTIP);
         straighten_button.toggled.connect(on_straighten_toggled);
         straighten_button.is_important = true;
-        toolbar.insert(straighten_button, -1);
+        // toolbar.insert(straighten_button, -1);
 
         // redeye reduction tool
         redeye_button = new Gtk.ToggleToolButton ();
@@ -472,7 +476,7 @@ public abstract class EditingHostPage : SinglePhotoPage {
         redeye_button.set_tooltip_text(Resources.RED_EYE_TOOLTIP);
         redeye_button.toggled.connect(on_redeye_toggled);
         redeye_button.is_important = true;
-        toolbar.insert(redeye_button, -1);
+        // toolbar.insert(redeye_button, -1);
         
         // adjust tool
         adjust_button = new Gtk.ToggleToolButton();
@@ -481,7 +485,7 @@ public abstract class EditingHostPage : SinglePhotoPage {
         adjust_button.set_tooltip_text(Resources.ADJUST_TOOLTIP);
         adjust_button.toggled.connect(on_adjust_toggled);
         adjust_button.is_important = true;
-        toolbar.insert(adjust_button, -1);
+        // toolbar.insert(adjust_button, -1);
 
         // enhance tool
         enhance_button = new Gtk.ToolButton(null, Resources.ENHANCE_LABEL);
@@ -489,7 +493,17 @@ public abstract class EditingHostPage : SinglePhotoPage {
         enhance_button.set_tooltip_text(Resources.ENHANCE_TOOLTIP);
         enhance_button.clicked.connect(on_enhance);
         enhance_button.is_important = true;
-        toolbar.insert(enhance_button, -1);
+        // toolbar.insert(enhance_button, -1);
+
+        comment_entry = new Gtk.Entry();
+        comment_tool_item = new Gtk.ToolItem();
+        comment_tool_item.add(comment_entry);
+        toolbar.insert(comment_tool_item, -1);
+
+        comment_button = new Gtk.ToolButton(null, "Записать комментарий"); // TODO Resources
+        comment_button.clicked.connect(on_set_comment);
+        comment_button.is_important = true;
+        toolbar.insert(comment_button, -1);
         
 #if ENABLE_FACES
         // faces tool
@@ -863,6 +877,11 @@ public abstract class EditingHostPage : SinglePhotoPage {
         // check if the photo altered while away
         if (has_photo() && pixbuf_dirty)
             replace_photo(get_photo());
+
+        if (has_photo())
+        {
+            set_comment_entry_content();
+        }
     }
     
     public override void switching_from() {
@@ -1103,6 +1122,7 @@ public abstract class EditingHostPage : SinglePhotoPage {
         straighten_button.sensitive = sensitivity;
         redeye_button.sensitive = sensitivity;
         adjust_button.sensitive = sensitivity;
+        comment_button.sensitive = sensitivity;
         enhance_button.sensitive = sensitivity;
         zoom_slider.sensitive = sensitivity;
 
@@ -1370,6 +1390,7 @@ public abstract class EditingHostPage : SinglePhotoPage {
             is_enhance_available(photo) : false;
         straighten_button.sensitive = ((photo != null) && (!photo_missing)) ?
             EditingTools.StraightenTool.is_available(photo, scaling) : false;
+        comment_button.sensitive = ((photo != null) && (!photo_missing)) ? true : false;
                     
         base.update_actions(selected_count, count);
     }
@@ -1983,6 +2004,23 @@ public abstract class EditingHostPage : SinglePhotoPage {
         get_command_manager().execute(command);
     }
 
+    private void set_comment_entry_content() {
+        Photo? photo = get_photo();
+        if (photo is LibraryPhoto) {
+            LibraryPhoto item = photo as LibraryPhoto;
+            string? comment = item.get_comment();
+            if (comment == null)
+            {
+                comment_entry.set_text("");
+            } else {
+                comment_entry.set_text(comment);
+            }
+        } else {
+            comment_entry.set_text("");
+        }
+        comment_entry.set_width_chars((int)comment_entry.text_length + 20);
+    }
+
     public void on_edit_comment() {
         LibraryPhoto item;
         if (get_photo() is LibraryPhoto)
@@ -2107,7 +2145,6 @@ public abstract class EditingHostPage : SinglePhotoPage {
     private void on_tool_aborted() {
         deactivate_tool();
         set_photo_missing(true);
-    }
 
     protected void toggle_crop() {
         crop_button.set_active(!crop_button.get_active());
@@ -2145,6 +2182,19 @@ public abstract class EditingHostPage : SinglePhotoPage {
         return !photo_missing;
     }
     
+    private void on_set_comment() {
+        LibraryPhoto item;
+        if (get_photo() is LibraryPhoto)
+            item = get_photo() as LibraryPhoto;
+        else
+            return;
+
+        string new_comment = comment_entry.text;
+
+        EditCommentCommand command = new EditCommentCommand(item, new_comment);
+        get_command_manager().execute(command);
+    }
+
     public void on_enhance() {
         // because running multiple tools at once is not currently supported, deactivate any current
         // tool; however, there is a special case of running enhancement while the AdjustTool is
