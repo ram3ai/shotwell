@@ -861,6 +861,11 @@ public abstract class EditingHostPage : SinglePhotoPage {
             if (null != view_in_parent)
                 parent_view.select_marked(parent_view.mark(view_in_parent));
         }
+
+        if (has_photo())
+        {
+            set_comment_entry_content();
+        }
     }
     
     public override void realize() {
@@ -2145,6 +2150,7 @@ public abstract class EditingHostPage : SinglePhotoPage {
     private void on_tool_aborted() {
         deactivate_tool();
         set_photo_missing(true);
+    }
 
     protected void toggle_crop() {
         crop_button.set_active(!crop_button.get_active());
